@@ -4,11 +4,49 @@ from datetime import datetime, date
 from plotly.utils import PlotlyJSONEncoder
 import plotly.graph_objects as go
 import json
+import os
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mood_tracker.db'
 app.secret_key = 'your-secret-key-here'  # Required for flash messages
 db = SQLAlchemy(app)
+
+# Notification settings file
+NOTIFICATION_SETTINGS_FILE = 'notification_settings.json'
+
+class NotificationSettings:
+    def __init__(self):
+        self.settings = self.load_settings()
+    
+    def load_settings(self):
+        default_settings = {
+            'enabled': True,
+            'time': '15:00',
+            'timezone': 'EST',
+            'duration': 10
+        }
+        
+        if os.path.exists(NOTIFICATION_SETTINGS_FILE):
+            try:
+                with open(NOTIFICATION_SETTINGS_FILE, 'r') as f:
+                    return json.load(f)
+            except:
+                return default_settings
+        return default_settings
+    
+    def save_settings(self):
+        with open(NOTIFICATION_SETTINGS_FILE, 'w') as f:
+            json.dump(self.settings, f, indent=2)
+    
+    def get_setting(self, key):
+        return self.settings.get(key)
+    
+    def update_setting(self, key, value):
+        self.settings[key] = value
+        self.save_settings()
+
+# Global notification settings instance
+notification_settings = NotificationSettings()
 
 class Medication(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -46,6 +84,12 @@ def index():
 def submit_entry():
     data = request.form
     entry_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+    today = datetime.now().date()
+    
+    # Check if entry is for a future date
+    if entry_date > today:
+        flash('Cannot create entries for future dates. Please select today\'s date or a past date.', 'warning')
+        return redirect(url_for('index'))
     
     # Check if entry already exists for this date
     existing_entry = MoodEntry.query.filter_by(entry_date=entry_date).first()
@@ -77,7 +121,8 @@ def manage_entries():
     entries = MoodEntry.query.order_by(MoodEntry.entry_date.desc()).all()
     medications = Medication.query.order_by(Medication.name).all()
     edit_medication_id = request.args.get('edit_medication_id', type=int)
-    return render_template('manage.html', entries=entries, medications=medications, edit_medication_id=edit_medication_id)
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    return render_template('manage.html', entries=entries, medications=medications, edit_medication_id=edit_medication_id, today_date=today_date)
 
 @app.route('/edit/<int:entry_id>', methods=['POST'])
 def edit_entry(entry_id):
@@ -85,6 +130,12 @@ def edit_entry(entry_id):
     data = request.form
     
     new_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+    today = datetime.now().date()
+    
+    # Check if entry is for a future date
+    if new_date > today:
+        flash('Cannot edit entries to future dates. Please select today\'s date or a past date.', 'warning')
+        return redirect(url_for('manage_entries'))
     
     # Check if the new date conflicts with another entry
     if new_date != entry.entry_date:
@@ -219,6 +270,49 @@ def edit_medication(med_id):
     db.session.commit()
     flash('Medication name updated.', 'success')
     return redirect(url_for('manage_entries'))
+
+@app.route('/admin')
+def admin():
+    """Admin panel for testing and system management."""
+    return render_template('admin.html', settings=notification_settings.settings)
+
+@app.route('/test_notification', methods=['POST'])
+def test_notification():
+    """Send a test notification."""
+    try:
+        from win10toast import ToastNotifier
+        toaster = ToastNotifier()
+        toaster.show_toast(
+            "Mood Tracker Test",
+            "This is a test notification from the admin panel!",
+            duration=5,
+            threaded=True
+        )
+        flash('Test notification sent successfully!', 'success')
+    except Exception as e:
+        flash(f'Error sending notification: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin'))
+
+@app.route('/update_notification_settings', methods=['POST'])
+def update_notification_settings():
+    """Update notification settings."""
+    try:
+        enabled = request.form.get('enabled') == 'on'
+        time = request.form.get('time', '15:00')
+        timezone = request.form.get('timezone', 'EST')
+        duration = int(request.form.get('duration', 10))
+        
+        notification_settings.update_setting('enabled', enabled)
+        notification_settings.update_setting('time', time)
+        notification_settings.update_setting('timezone', timezone)
+        notification_settings.update_setting('duration', duration)
+        
+        flash('Notification settings updated successfully!', 'success')
+    except Exception as e:
+        flash(f'Error updating settings: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     app.run(debug=True) 

@@ -8,6 +8,20 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Mood Tracker</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('admin') }}">
+                    <i class="bi bi-gear"></i> Admin Panel
+                </a>
+                <a class="nav-link" href="{{ url_for('manage_entries') }}">Manage Entries</a>
+                <a class="nav-link active" href="{{ url_for('visualize') }}">Visualizations</a>
+            </div>
+        </div>
+    </nav>
+
     <div class="container mt-5">
         <h1 class="text-center mb-4">Mood Tracker Visualizations</h1>
         
@@ -24,10 +38,6 @@
                         {% else %}
                             <p class="text-center">No data available for visualization yet. Start tracking your mood to see the charts!</p>
                         {% endif %}
-                        
-                        <div class="text-center mt-4">
-                            <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Tracker</a>
-                        </div>
                     </div>
                 </div>
             </div>

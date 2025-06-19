@@ -17,6 +17,20 @@
     </style>
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Mood Tracker</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('admin') }}">
+                    <i class="bi bi-gear"></i> Admin Panel
+                </a>
+                <a class="nav-link" href="{{ url_for('manage_entries') }}">Manage Entries</a>
+                <a class="nav-link" href="{{ url_for('visualize') }}">Visualizations</a>
+            </div>
+        </div>
+    </nav>
+
     <div class="container mt-5">
         <h1 class="text-center mb-4">Daily Mood Tracker</h1>
         
@@ -38,7 +52,7 @@
                         <form action="{{ url_for('submit_entry') }}" method="POST">
                             <div class="mb-3">
                                 <label for="date" class="form-label">Date</label>
-                                <input type="date" class="form-control" id="date" name="date" required value="{{ today_date }}">
+                                <input type="date" class="form-control" id="date" name="date" required value="{{ today_date }}" max="{{ today_date }}">
                             </div>
 
                             <div class="mb-3">
@@ -90,8 +104,6 @@
 
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">Submit Entry</button>
-                                <a href="{{ url_for('visualize') }}" class="btn btn-secondary">View Visualizations</a>
-                                <a href="{{ url_for('manage_entries') }}" class="btn btn-info">Manage Entries</a>
                             </div>
                         </form>
                     </div>
@@ -114,6 +126,18 @@
         `;
         medList.appendChild(medDiv);
     }
+    
+    // Date validation
+    document.getElementById('date').addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today
+        
+        if (selectedDate > today) {
+            alert('Cannot select future dates. Please choose today\'s date or a past date.');
+            this.value = new Date().toISOString().split('T')[0]; // Reset to today
+        }
+    });
     </script>
 </body>
 </html> 
