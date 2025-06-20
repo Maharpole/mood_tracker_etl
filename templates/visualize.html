@@ -13,11 +13,15 @@
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">Mood Tracker</a>
             <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    Welcome, {{ current_user.username }}!
+                </span>
                 <a class="nav-link" href="{{ url_for('admin') }}">
                     <i class="bi bi-gear"></i> Admin Panel
                 </a>
                 <a class="nav-link" href="{{ url_for('manage_entries') }}">Manage Entries</a>
                 <a class="nav-link active" href="{{ url_for('visualize') }}">Visualizations</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
             </div>
         </div>
     </nav>

@@ -13,11 +13,15 @@
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">Mood Tracker</a>
             <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    Welcome, {{ current_user.username }}!
+                </span>
                 <a class="nav-link" href="{{ url_for('admin') }}">
                     <i class="bi bi-gear"></i> Admin Panel
                 </a>
                 <a class="nav-link active" href="{{ url_for('manage_entries') }}">Manage Entries</a>
                 <a class="nav-link" href="{{ url_for('visualize') }}">Visualizations</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
             </div>
         </div>
     </nav>
@@ -101,10 +105,14 @@
                                     <thead>
                                         <tr>
                                             <th>Date</th>
-                                            <th>Energy</th>
                                             <th>Mood</th>
-                                            <th>Stress</th>
-                                            <th>Medication</th>
+                                            <th>Hours Slept</th>
+                                            <th>Anxiety</th>
+                                            <th>Energy</th>
+                                            <th>Irritability</th>
+                                            <th>Weight</th>
+                                            <th>Activities</th>
+                                            <th>Medications</th>
                                             <th>Notes</th>
                                             <th>Actions</th>
                                         </tr>
@@ -117,13 +125,42 @@
                                                     <input type="date" name="date" value="{{ entry.entry_date.strftime('%Y-%m-%d') }}" class="form-control form-control-sm" max="{{ today_date }}">
                                             </td>
                                             <td>
-                                                    <input type="number" name="energy" value="{{ entry.energy_level }}" min="1" max="10" class="form-control form-control-sm" style="width: 60px;">
+                                                    <input type="number" name="mood" value="{{ entry.mood_level }}" min="0" max="10" class="form-control form-control-sm" style="width: 60px;">
                                             </td>
                                             <td>
-                                                    <input type="number" name="mood" value="{{ entry.mood_level }}" min="1" max="10" class="form-control form-control-sm" style="width: 60px;">
+                                                    <input type="number" name="hours_slept" value="{{ entry.hours_slept }}" min="0" max="12" step="0.5" class="form-control form-control-sm" style="width: 80px;">
                                             </td>
                                             <td>
-                                                    <input type="number" name="stress" value="{{ entry.stress_level }}" min="1" max="10" class="form-control form-control-sm" style="width: 60px;">
+                                                    <input type="number" name="anxiety" value="{{ entry.anxiety }}" min="0" max="10" class="form-control form-control-sm" style="width: 60px;">
+                                            </td>
+                                            <td>
+                                                    <input type="number" name="energy" value="{{ entry.energy_level }}" min="0" max="10" class="form-control form-control-sm" style="width: 60px;">
+                                            </td>
+                                            <td>
+                                                    <input type="number" name="irritability" value="{{ entry.irritability }}" min="0" max="10" class="form-control form-control-sm" style="width: 60px;">
+                                            </td>
+                                            <td>
+                                                    <input type="number" name="weight" value="{{ entry.weight or '' }}" min="0" max="500" step="0.1" class="form-control form-control-sm" style="width: 80px;">
+                                            </td>
+                                            <td>
+                                                    <div class="form-check form-check-inline">
+                                                        <input type="checkbox" name="alcohol_drugs" class="form-check-input" {% if entry.alcohol_drugs %}checked{% endif %}>
+                                                        <label class="form-check-label small">A/D</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input type="checkbox" name="exercise" class="form-check-input" {% if entry.exercise %}checked{% endif %}>
+                                                        <label class="form-check-label small">Ex</label>
+                                                    </div>
+                                                    {% if gender == 'female' %}
+                                                    <div class="form-check form-check-inline">
+                                                        <input type="checkbox" name="menstruation" class="form-check-input" {% if entry.menstruation %}checked{% endif %}>
+                                                        <label class="form-check-label small">M</label>
+                                                    </div>
+                                                    {% endif %}
+                                                    <div class="form-check form-check-inline">
+                                                        <input type="checkbox" name="stressful_event" class="form-check-input" {% if entry.stressful_event %}checked{% endif %}>
+                                                        <label class="form-check-label small">S</label>
+                                                    </div>
                                             </td>
                                             <td>
                                                     <div class="form-check">

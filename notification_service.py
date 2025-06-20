@@ -61,19 +61,37 @@ def check_today_entry():
         # Check if entry exists for today
         existing_entry = MoodEntry.query.filter_by(entry_date=today).first()
         
+        # Check if weight input is needed (every 7 days)
+        last_weight_entry = MoodEntry.query.filter(MoodEntry.weight.isnot(None)).order_by(MoodEntry.entry_date.desc()).first()
+        weight_needed = False
+        if not last_weight_entry:
+            weight_needed = True
+        else:
+            days_since_last_weight = (today - last_weight_entry.entry_date).days
+            weight_needed = days_since_last_weight >= 7
+        
+        # Prepare notification message
+        message = ""
         if not existing_entry:
+            message = "You haven't logged your mood today!"
+            if weight_needed:
+                message += " Also, it's time to log your weekly weight."
+        elif weight_needed:
+            message = "It's time to log your weekly weight!"
+        
+        if message:
             # Send notification
             toaster = ToastNotifier()
             duration = settings.get('duration', 10)
             toaster.show_toast(
                 "Mood Tracker Reminder",
-                "You haven't logged your mood today! Open your browser to add your entry.",
+                f"{message} Open your browser to add your entry.",
                 duration=duration,
                 threaded=True
             )
-            print(f"Notification sent at {datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S')} - No entry found for today")
+            print(f"Notification sent at {datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S')} - {message}")
         else:
-            print(f"Entry already exists for today ({today}) - no notification needed")
+            print(f"Entry already exists for today ({today}) and weight is up to date - no notification needed")
             
     except Exception as e:
         print(f"Error checking today's entry: {e}")

@@ -22,11 +22,15 @@
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">Mood Tracker</a>
             <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    Welcome, {{ current_user.username }}!
+                </span>
                 <a class="nav-link" href="{{ url_for('admin') }}">
                     <i class="bi bi-gear"></i> Admin Panel
                 </a>
                 <a class="nav-link" href="{{ url_for('manage_entries') }}">Manage Entries</a>
                 <a class="nav-link" href="{{ url_for('visualize') }}">Visualizations</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
             </div>
         </div>
     </nav>
@@ -55,35 +59,66 @@
                                 <input type="date" class="form-control" id="date" name="date" required value="{{ today_date }}" max="{{ today_date }}">
                             </div>
 
-                            <div class="mb-3">
-                                <label for="energy" class="form-label">Energy Level</label>
-                                <span class="slider-value" id="energyValue">5</span>
-                                <input type="range" class="form-range" id="energy" name="energy" min="0" max="10" value="5" oninput="energyValue.textContent = this.value">
-                                <div class="d-flex justify-content-between">
-                                  <span>Low</span>
-                                  <span>High</span>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
+                            <div class="mb-4 pb-3 border-bottom">
                                 <label for="mood" class="form-label">Mood Level</label>
                                 <span class="slider-value" id="moodValue">5</span>
                                 <input type="range" class="form-range" id="mood" name="mood" min="0" max="10" value="5" oninput="moodValue.textContent = this.value">
-                                <div class="d-flex justify-content-between">
-                                  <span>Low</span>
-                                  <span>High</span>
+                                <div class="d-flex justify-content-between mt-1">
+                                  <small class="text-muted">Low</small>
+                                  <small class="text-muted">High</small>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="stress" class="form-label">Stress Level</label>
-                                <span class="slider-value" id="stressValue">5</span>
-                                <input type="range" class="form-range" id="stress" name="stress" min="0" max="10" value="5" oninput="stressValue.textContent = this.value">
-                                <div class="d-flex justify-content-between">
-                                  <span>Low</span>
-                                  <span>High</span>
+                            <div class="mb-4 pb-3 border-bottom">
+                                <label for="hours_slept" class="form-label">Hours Slept</label>
+                                <span class="slider-value" id="hoursSleptValue">7</span>
+                                <input type="range" class="form-range" id="hours_slept" name="hours_slept" min="0" max="12" step="0.5" value="7" oninput="hoursSleptValue.textContent = this.value">
+                                <div class="d-flex justify-content-between mt-1">
+                                  <small class="text-muted">0h</small>
+                                  <small class="text-muted">12h</small>
                                 </div>
                             </div>
+
+                            <div class="mb-4 pb-3 border-bottom">
+                                <label for="anxiety" class="form-label">Anxiety Level</label>
+                                <span class="slider-value" id="anxietyValue">5</span>
+                                <input type="range" class="form-range" id="anxiety" name="anxiety" min="0" max="10" value="5" oninput="anxietyValue.textContent = this.value">
+                                <div class="d-flex justify-content-between mt-1">
+                                  <small class="text-muted">Low</small>
+                                  <small class="text-muted">High</small>
+                                </div>
+                            </div>
+
+                            <div class="mb-4 pb-3 border-bottom">
+                                <label for="energy" class="form-label">Energy Level</label>
+                                <span class="slider-value" id="energyValue">5</span>
+                                <input type="range" class="form-range" id="energy" name="energy" min="0" max="10" value="5" oninput="energyValue.textContent = this.value">
+                                <div class="d-flex justify-content-between mt-1">
+                                  <small class="text-muted">Low</small>
+                                  <small class="text-muted">High</small>
+                                </div>
+                            </div>
+
+                            <div class="mb-4 pb-3 border-bottom">
+                                <label for="irritability" class="form-label">Irritability Level</label>
+                                <span class="slider-value" id="irritabilityValue">5</span>
+                                <input type="range" class="form-range" id="irritability" name="irritability" min="0" max="10" value="5" oninput="irritabilityValue.textContent = this.value">
+                                <div class="d-flex justify-content-between mt-1">
+                                  <small class="text-muted">Low</small>
+                                  <small class="text-muted">High</small>
+                                </div>
+                            </div>
+
+                            {% if weight_needed %}
+                            <div class="mb-4 pb-3 border-bottom">
+                                <label for="weight" class="form-label">Weight (lbs)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="weight" name="weight" min="0" max="500" step="0.1" placeholder="Enter your weight">
+                                    <span class="input-group-text">lbs</span>
+                                </div>
+                                <small class="text-muted">This is tracked every 7 days</small>
+                            </div>
+                            {% endif %}
 
                             <div class="mb-3" id="medications-section">
                                 <label class="form-label">Medications Taken Today</label>
@@ -94,6 +129,34 @@
                                         <label class="form-check-label" for="med-{{ med.id }}">{{ med.name }}</label>
                                     </div>
                                     {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Daily Activities & Events</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="alcohol_drugs" id="alcohol_drugs">
+                                            <label class="form-check-label" for="alcohol_drugs">Alcohol/Drugs</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="exercise" id="exercise">
+                                            <label class="form-check-label" for="exercise">Exercise</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {% if gender == 'female' %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="menstruation" id="menstruation">
+                                            <label class="form-check-label" for="menstruation">Menstruation</label>
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="stressful_event" id="stressful_event">
+                                            <label class="form-check-label" for="stressful_event">Stressful/Emotional Event</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

@@ -1,6 +1,7 @@
 {
   "enabled": true,
   "time": "15:00",
-  "timezone": "EST",
-  "duration": 10
+  "timezone": "US/Eastern",
+  "duration": 10,
+  "gender": "male"
 }
