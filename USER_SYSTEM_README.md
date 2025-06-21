@@ -12,11 +12,17 @@ The Mood Tracker now supports multiple users with individual accounts. Each user
 
 ## Features
 
+### Beta Code Access Control
+- **Beta Code Required**: Users must enter a valid beta code to create an account
+- **Controlled Access**: Only people with the beta code can register
+- **Easy Management**: Beta code can be changed via configuration file or management script
+
 ### User Registration
-- Users can create new accounts with username, email, and password
+- Users can create new accounts with username, email, password, and beta code
 - Password validation (minimum 6 characters)
 - Email and username uniqueness validation
 - Password confirmation check
+- Beta code verification
 
 ### User Login
 - Secure login with username and password
@@ -40,7 +46,18 @@ The Mood Tracker now supports multiple users with individual accounts. Each user
 pip install -r requirements.txt
 ```
 
-### 2. Run Database Migration (if upgrading from existing installation)
+### 2. Configure Beta Code
+Edit `config.py` to set your desired beta code:
+```python
+BETA_CODE = "your-custom-beta-code-here"
+```
+
+Or use the management script:
+```bash
+python manage_beta_code.py
+```
+
+### 3. Run Database Migration (if upgrading from existing installation)
 If you have existing mood tracker data, run the migration script:
 ```bash
 python migrate_to_users.py
@@ -51,15 +68,41 @@ This will:
 - Associate all existing data with the default user
 - Default credentials: `default_user` / `changeme123`
 
-### 3. Start the Application
+### 4. Start the Application
 ```bash
 python app.py
 ```
 
-### 4. Access the Application
+### 5. Access the Application
 - Navigate to `http://localhost:5000`
 - You'll be redirected to the login page
-- Use the default credentials or create a new account
+- Use the default credentials or create a new account with the beta code
+
+## Beta Code Management
+
+### Changing the Beta Code
+You can change the beta code in several ways:
+
+1. **Edit config.py directly**:
+   ```python
+   BETA_CODE = "new-beta-code-here"
+   ```
+
+2. **Use the management script**:
+   ```bash
+   python manage_beta_code.py
+   ```
+
+3. **Show current beta code**:
+   ```bash
+   python manage_beta_code.py
+   # Choose option 1
+   ```
+
+### Sharing the Beta Code
+- Share the beta code with friends you want to give access to
+- They'll need this code to create an account
+- Without the code, registration will be blocked
 
 ## Database Schema Changes
 
@@ -159,4 +202,50 @@ Potential improvements for the user system:
 - Data export/import
 - Account deletion
 - Password strength requirements
-- Two-factor authentication 
+- Two-factor authentication
+
+## Logging System
+
+The application includes comprehensive logging to help with debugging and monitoring:
+
+### Log Files
+- `logs/mood_tracker.log`: Main application log with all events
+- `logs/errors.log`: Error-only log for quick debugging
+
+### Log Levels
+- **INFO**: Normal application events (logins, data operations, etc.)
+- **WARNING**: Potential issues (invalid inputs, duplicate attempts, etc.)
+- **ERROR**: Application errors and exceptions
+
+### What Gets Logged
+- User registration and login attempts
+- Mood entry creation, editing, and deletion
+- Medication management operations
+- Page access and navigation
+- Database operations and errors
+- Beta code usage and validation
+- Application startup and configuration
+
+### Using the Log Viewer
+```bash
+python view_logs.py
+```
+
+Features:
+- View log statistics
+- Search for specific terms
+- View user activity
+- View today's logs
+- View recent errors
+- Clear log files
+
+### Log Rotation
+- Log files are automatically rotated when they reach 10MB
+- Up to 5 backup files are kept
+- Prevents logs from consuming too much disk space
+
+### Debugging Tips
+1. **Check recent logs**: `python view_logs.py` → Option 2
+2. **Look for errors**: `python view_logs.py` → Option 3
+3. **Search for specific user**: `python view_logs.py` → Option 5
+4. **Monitor today's activity**: `python view_logs.py` → Option 6 

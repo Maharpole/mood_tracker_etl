@@ -7,11 +7,82 @@ from plotly.utils import PlotlyJSONEncoder
 import plotly.graph_objects as go
 import json
 import os
+import logging
+from logging.handlers import RotatingFileHandler
+import sys
+
+# Import configuration
+try:
+    from config import *
+except ImportError:
+    # Fallback configuration if config.py doesn't exist
+    BETA_CODE = "moodtracker2024"
+    SECRET_KEY = 'your-secret-key-here'
+    DATABASE_URI = 'sqlite:///mood_tracker.db'
+    MIN_PASSWORD_LENGTH = 6
+
+# Create logs directory if it doesn't exist
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+# Configure logging
+def setup_logging():
+    """Setup logging configuration"""
+    # Create formatters
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    console_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s'
+    )
+    
+    # Setup file handler with rotation
+    file_handler = RotatingFileHandler(
+        'logs/mood_tracker.log', 
+        maxBytes=10240000,  # 10MB
+        backupCount=5
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(file_formatter)
+    
+    # Setup console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(console_formatter)
+    
+    # Setup error file handler
+    error_handler = RotatingFileHandler(
+        'logs/errors.log',
+        maxBytes=10240000,  # 10MB
+        backupCount=5
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(file_formatter)
+    
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(error_handler)
+    
+    # Create application logger
+    app_logger = logging.getLogger('mood_tracker')
+    app_logger.setLevel(logging.INFO)
+    
+    return app_logger
+
+# Setup logging
+logger = setup_logging()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mood_tracker.db'
-app.secret_key = 'your-secret-key-here'  # Required for flash messages
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
+app.secret_key = SECRET_KEY
 db = SQLAlchemy(app)
+
+# Log application startup
+logger.info("Mood Tracker application starting up...")
+logger.info(f"Database URI: {DATABASE_URI}")
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -122,65 +193,96 @@ def register():
         email = request.form['email']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
+        beta_code = request.form['beta_code']
+        
+        logger.info(f"Registration attempt for username: {username}, email: {email}")
         
         # Validation
         if not username or not email or not password:
+            logger.warning(f"Registration failed - missing required fields for username: {username}")
             flash('All fields are required.', 'error')
-            return render_template('register.html')
+            return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
         
         if password != confirm_password:
+            logger.warning(f"Registration failed - password mismatch for username: {username}")
             flash('Passwords do not match.', 'error')
-            return render_template('register.html')
+            return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
         
-        if len(password) < 6:
-            flash('Password must be at least 6 characters long.', 'error')
-            return render_template('register.html')
+        if len(password) < MIN_PASSWORD_LENGTH:
+            logger.warning(f"Registration failed - password too short for username: {username}")
+            flash(f'Password must be at least {MIN_PASSWORD_LENGTH} characters long.', 'error')
+            return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
         
         # Check if user already exists
         if User.query.filter_by(username=username).first():
+            logger.warning(f"Registration failed - username already exists: {username}")
             flash('Username already exists.', 'error')
-            return render_template('register.html')
+            return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
         
         if User.query.filter_by(email=email).first():
+            logger.warning(f"Registration failed - email already registered: {email}")
             flash('Email already registered.', 'error')
-            return render_template('register.html')
+            return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
+        
+        # Check beta code
+        if beta_code != BETA_CODE:
+            logger.warning(f"Registration failed - invalid beta code for username: {username}, provided code: {beta_code}")
+            flash('Invalid beta code.', 'error')
+            return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
         
         # Create new user
-        user = User(username=username, email=email)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        
-        flash('Registration successful! Please log in.', 'success')
-        return redirect(url_for('login'))
+        try:
+            user = User(username=username, email=email)
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            
+            logger.info(f"User registration successful - username: {username}, email: {email}, user_id: {user.id}")
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            logger.error(f"Registration failed - database error for username: {username}, error: {str(e)}")
+            db.session.rollback()
+            flash('Registration failed. Please try again.', 'error')
+            return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
     
-    return render_template('register.html')
+    logger.info("Registration page accessed")
+    return render_template('register.html', min_password_length=MIN_PASSWORD_LENGTH)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        logger.info(f"User already logged in, redirecting: {current_user.username}")
         return redirect(url_for('index'))
     
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         
+        logger.info(f"Login attempt for username: {username}")
+        
         user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
             login_user(user)
+            logger.info(f"Login successful - username: {username}, user_id: {user.id}")
             flash('Logged in successfully!', 'success')
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('index'))
         else:
+            logger.warning(f"Login failed - invalid credentials for username: {username}")
             flash('Invalid username or password.', 'error')
     
+    logger.info("Login page accessed")
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
+    username = current_user.username
+    user_id = current_user.id
     logout_user()
+    logger.info(f"User logged out - username: {username}, user_id: {user_id}")
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
@@ -188,6 +290,7 @@ def logout():
 @login_required
 def index():
     """Main page with mood entry form."""
+    logger.info(f"Index page accessed by user: {current_user.username}")
     today_date = datetime.now().strftime('%Y-%m-%d')
     medications = Medication.query.filter_by(active=True, user_id=current_user.id).all()
     settings = NotificationSettings()
@@ -216,52 +319,64 @@ def index():
 @app.route('/submit', methods=['POST'])
 @login_required
 def submit_entry():
+    logger.info(f"Mood entry submission attempt by user: {current_user.username}")
     data = request.form
     entry_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
     today = datetime.now().date()
     
     # Check if entry is for a future date
     if entry_date > today:
+        logger.warning(f"Future date entry attempt by user: {current_user.username}, date: {entry_date}")
         flash('Cannot create entries for future dates. Please select today\'s date or a past date.', 'warning')
         return redirect(url_for('index'))
     
     # Check if entry already exists for this date for this user
     existing_entry = MoodEntry.query.filter_by(entry_date=entry_date, user_id=current_user.id).first()
     if existing_entry:
+        logger.warning(f"Duplicate entry attempt by user: {current_user.username}, date: {entry_date}")
         flash('An entry already exists for this date. Please edit the existing entry instead.', 'warning')
         return redirect(url_for('manage_entries'))
     
-    new_entry = MoodEntry(
-        user_id=current_user.id,
-        entry_date=entry_date,
-        mood_level=int(data['mood']),
-        hours_slept=float(data['hours_slept']),
-        anxiety=int(data['anxiety']),
-        energy_level=int(data['energy']),
-        irritability=int(data['irritability']),
-        alcohol_drugs=data.get('alcohol_drugs') == 'on',
-        exercise=data.get('exercise') == 'on',
-        menstruation=data.get('menstruation') == 'on',
-        stressful_event=data.get('stressful_event') == 'on',
-        weight=float(data['weight']) if data.get('weight') else None,
-        notes=data.get('notes', '')
-    )
-    db.session.add(new_entry)
-    db.session.flush()  # Get new_entry.id before commit
+    try:
+        new_entry = MoodEntry(
+            user_id=current_user.id,
+            entry_date=entry_date,
+            mood_level=int(data['mood']),
+            hours_slept=float(data['hours_slept']),
+            anxiety=int(data['anxiety']),
+            energy_level=int(data['energy']),
+            irritability=int(data['irritability']),
+            alcohol_drugs=data.get('alcohol_drugs') == 'on',
+            exercise=data.get('exercise') == 'on',
+            menstruation=data.get('menstruation') == 'on',
+            stressful_event=data.get('stressful_event') == 'on',
+            weight=float(data['weight']) if data.get('weight') else None,
+            notes=data.get('notes', '')
+        )
+        db.session.add(new_entry)
+        db.session.flush()  # Get new_entry.id before commit
 
-    # Save medications taken
-    taken_ids = data.getlist('medications_taken')
-    for med in Medication.query.filter(Medication.id.in_(taken_ids), Medication.user_id == current_user.id).all():
-        mem = MoodEntryMedication(mood_entry_id=new_entry.id, medication_id=med.id, taken=True)
-        db.session.add(mem)
-    db.session.commit()
-    flash('Entry added successfully!', 'success')
-    return redirect(url_for('index'))
+        # Save medications taken
+        taken_ids = data.getlist('medications_taken')
+        for med in Medication.query.filter(Medication.id.in_(taken_ids), Medication.user_id == current_user.id).all():
+            mem = MoodEntryMedication(mood_entry_id=new_entry.id, medication_id=med.id, taken=True)
+            db.session.add(mem)
+        
+        db.session.commit()
+        logger.info(f"Mood entry created successfully - user: {current_user.username}, entry_id: {new_entry.id}, date: {entry_date}")
+        flash('Entry added successfully!', 'success')
+        return redirect(url_for('index'))
+    except Exception as e:
+        logger.error(f"Mood entry creation failed - user: {current_user.username}, error: {str(e)}")
+        db.session.rollback()
+        flash('Failed to create entry. Please try again.', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/manage')
 @login_required
 def manage_entries():
     """Manage existing entries."""
+    logger.info(f"Manage entries page accessed by user: {current_user.username}")
     entries = MoodEntry.query.filter_by(user_id=current_user.id).order_by(MoodEntry.entry_date.desc()).all()
     medications = Medication.query.filter_by(active=True, user_id=current_user.id).order_by(Medication.name).all()
     today_date = datetime.now().strftime('%Y-%m-%d')
@@ -278,6 +393,7 @@ def manage_entries():
 @app.route('/edit/<int:entry_id>', methods=['POST'])
 @login_required
 def edit_entry(entry_id):
+    logger.info(f"Entry edit attempt by user: {current_user.username}, entry_id: {entry_id}")
     entry = MoodEntry.query.filter_by(id=entry_id, user_id=current_user.id).first_or_404()
     data = request.form
     
@@ -286,6 +402,7 @@ def edit_entry(entry_id):
     
     # Check if entry is for a future date
     if new_date > today:
+        logger.warning(f"Future date edit attempt by user: {current_user.username}, entry_id: {entry_id}, date: {new_date}")
         flash('Cannot edit entries to future dates. Please select today\'s date or a past date.', 'warning')
         return redirect(url_for('manage_entries'))
     
@@ -293,38 +410,55 @@ def edit_entry(entry_id):
     if new_date != entry.entry_date:
         existing_entry = MoodEntry.query.filter_by(entry_date=new_date, user_id=current_user.id).first()
         if existing_entry and existing_entry.id != entry_id:
+            logger.warning(f"Date conflict edit attempt by user: {current_user.username}, entry_id: {entry_id}, date: {new_date}")
             flash('An entry already exists for this date.', 'warning')
             return redirect(url_for('manage_entries'))
     
-    entry.entry_date = new_date
-    entry.mood_level = int(data['mood'])
-    entry.hours_slept = float(data['hours_slept'])
-    entry.anxiety = int(data['anxiety'])
-    entry.energy_level = int(data['energy'])
-    entry.irritability = int(data['irritability'])
-    entry.alcohol_drugs = data.get('alcohol_drugs') == 'on'
-    entry.exercise = data.get('exercise') == 'on'
-    entry.menstruation = data.get('menstruation') == 'on'
-    entry.stressful_event = data.get('stressful_event') == 'on'
-    entry.weight = float(data['weight']) if data.get('weight') else None
-    entry.notes = data.get('notes', '')
-    
-    db.session.commit()
-    flash('Entry updated successfully!', 'success')
-    return redirect(url_for('manage_entries'))
+    try:
+        entry.entry_date = new_date
+        entry.mood_level = int(data['mood'])
+        entry.hours_slept = float(data['hours_slept'])
+        entry.anxiety = int(data['anxiety'])
+        entry.energy_level = int(data['energy'])
+        entry.irritability = int(data['irritability'])
+        entry.alcohol_drugs = data.get('alcohol_drugs') == 'on'
+        entry.exercise = data.get('exercise') == 'on'
+        entry.menstruation = data.get('menstruation') == 'on'
+        entry.stressful_event = data.get('stressful_event') == 'on'
+        entry.weight = float(data['weight']) if data.get('weight') else None
+        entry.notes = data.get('notes', '')
+        
+        db.session.commit()
+        logger.info(f"Entry edited successfully - user: {current_user.username}, entry_id: {entry_id}")
+        flash('Entry updated successfully!', 'success')
+        return redirect(url_for('manage_entries'))
+    except Exception as e:
+        logger.error(f"Entry edit failed - user: {current_user.username}, entry_id: {entry_id}, error: {str(e)}")
+        db.session.rollback()
+        flash('Failed to update entry. Please try again.', 'error')
+        return redirect(url_for('manage_entries'))
 
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 @login_required
 def delete_entry(entry_id):
+    logger.info(f"Entry deletion attempt by user: {current_user.username}, entry_id: {entry_id}")
     entry = MoodEntry.query.filter_by(id=entry_id, user_id=current_user.id).first_or_404()
-    db.session.delete(entry)
-    db.session.commit()
-    flash('Entry deleted successfully!', 'success')
-    return redirect(url_for('manage_entries'))
+    try:
+        db.session.delete(entry)
+        db.session.commit()
+        logger.info(f"Entry deleted successfully - user: {current_user.username}, entry_id: {entry_id}")
+        flash('Entry deleted successfully!', 'success')
+        return redirect(url_for('manage_entries'))
+    except Exception as e:
+        logger.error(f"Entry deletion failed - user: {current_user.username}, entry_id: {entry_id}, error: {str(e)}")
+        db.session.rollback()
+        flash('Failed to delete entry. Please try again.', 'error')
+        return redirect(url_for('manage_entries'))
 
 @app.route('/data')
 @login_required
 def get_data():
+    logger.info(f"Data API accessed by user: {current_user.username}")
     entries = MoodEntry.query.filter_by(user_id=current_user.id).all()
     data = [{
         'date': entry.entry_date.strftime('%Y-%m-%d'),
@@ -340,9 +474,11 @@ def get_data():
 @app.route('/visualize')
 @login_required
 def visualize():
+    logger.info(f"Visualization page accessed by user: {current_user.username}")
     entries = MoodEntry.query.filter_by(user_id=current_user.id).all()
     
     if entries:
+        logger.info(f"Generating visualization for user: {current_user.username}, entries count: {len(entries)}")
         dates = [entry.entry_date.strftime('%Y-%m-%d') for entry in entries]  # Remove time
         mood = [entry.mood_level for entry in entries]
         hours_slept = [entry.hours_slept for entry in entries]
@@ -481,21 +617,32 @@ def visualize():
 @login_required
 def add_medication():
     name = request.form.get('medication_name', '').strip()
+    logger.info(f"Medication addition attempt by user: {current_user.username}, medication: {name}")
+    
     if name:
         existing = Medication.query.filter_by(name=name, user_id=current_user.id).first()
         if existing:
             if not existing.active:
                 existing.active = True
                 db.session.commit()
+                logger.info(f"Medication reactivated by user: {current_user.username}, medication: {name}")
                 flash(f'Medication "{name}" reactivated.', 'success')
             else:
+                logger.warning(f"Duplicate medication attempt by user: {current_user.username}, medication: {name}")
                 flash(f'Medication "{name}" already exists.', 'warning')
         else:
-            med = Medication(name=name, user_id=current_user.id)
-            db.session.add(med)
-            db.session.commit()
-            flash(f'Medication "{name}" added.', 'success')
+            try:
+                med = Medication(name=name, user_id=current_user.id)
+                db.session.add(med)
+                db.session.commit()
+                logger.info(f"Medication added successfully by user: {current_user.username}, medication: {name}, med_id: {med.id}")
+                flash(f'Medication "{name}" added.', 'success')
+            except Exception as e:
+                logger.error(f"Medication addition failed - user: {current_user.username}, medication: {name}, error: {str(e)}")
+                db.session.rollback()
+                flash('Failed to add medication. Please try again.', 'error')
     else:
+        logger.warning(f"Empty medication name attempt by user: {current_user.username}")
         flash('Medication name cannot be empty.', 'danger')
     return redirect(url_for('manage_entries'))
 
@@ -538,6 +685,7 @@ def edit_medication(med_id):
 @login_required
 def admin():
     """Admin panel for testing and system management."""
+    logger.info(f"Admin panel accessed by user: {current_user.username}")
     return render_template('admin.html', 
                          enabled=notification_settings.get('enabled', True),
                          time=notification_settings.get('time', '15:00'),
@@ -548,6 +696,7 @@ def admin():
 @app.route('/test_notification', methods=['POST'])
 def test_notification():
     """Send a test notification."""
+    logger.info(f"Test notification requested by user: {current_user.username if current_user.is_authenticated else 'anonymous'}")
     try:
         from win10toast import ToastNotifier
         toaster = ToastNotifier()
@@ -557,8 +706,10 @@ def test_notification():
             duration=5,
             threaded=True
         )
+        logger.info("Test notification sent successfully")
         flash('Test notification sent successfully!', 'success')
     except Exception as e:
+        logger.error(f"Test notification failed: {str(e)}")
         flash(f'Error sending notification: {str(e)}', 'danger')
     
     return redirect(url_for('admin'))
@@ -566,14 +717,24 @@ def test_notification():
 @app.route('/update_notification_settings', methods=['POST'])
 def update_notification_settings():
     """Update notification settings."""
-    notification_settings.settings['enabled'] = 'enabled' in request.form
-    notification_settings.settings['time'] = request.form.get('time', '15:00')
-    notification_settings.settings['timezone'] = request.form.get('timezone', 'US/Eastern')
-    notification_settings.settings['duration'] = int(request.form.get('duration', 10))
-    notification_settings.settings['gender'] = request.form.get('gender', 'female')
-    notification_settings.save()
-    flash('Notification settings updated successfully!', 'success')
+    logger.info(f"Notification settings update requested by user: {current_user.username if current_user.is_authenticated else 'anonymous'}")
+    try:
+        notification_settings.settings['enabled'] = 'enabled' in request.form
+        notification_settings.settings['time'] = request.form.get('time', '15:00')
+        notification_settings.settings['timezone'] = request.form.get('timezone', 'US/Eastern')
+        notification_settings.settings['duration'] = int(request.form.get('duration', 10))
+        notification_settings.settings['gender'] = request.form.get('gender', 'female')
+        notification_settings.save()
+        logger.info("Notification settings updated successfully")
+        flash('Notification settings updated successfully!', 'success')
+    except Exception as e:
+        logger.error(f"Notification settings update failed: {str(e)}")
+        flash('Failed to update notification settings.', 'error')
     return redirect(url_for('admin'))
 
 if __name__ == '__main__':
+    logger.info("Starting Mood Tracker application...")
+    logger.info(f"Beta code: {BETA_CODE}")
+    logger.info(f"Database: {DATABASE_URI}")
+    logger.info("Application ready to serve requests")
     app.run(debug=True) 

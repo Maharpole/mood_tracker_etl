@@ -1,0 +1,29 @@
+2025-06-20 20:27:25,638 - mood_tracker - INFO - Mood Tracker application starting up...
+2025-06-20 20:27:25,639 - mood_tracker - INFO - Database URI: sqlite:///mood_tracker.db
+2025-06-20 20:27:25,655 - mood_tracker - INFO - Starting Mood Tracker application...
+2025-06-20 20:27:25,656 - mood_tracker - INFO - Beta code: moodtracker2024
+2025-06-20 20:27:25,656 - mood_tracker - INFO - Database: sqlite:///mood_tracker.db
+2025-06-20 20:27:25,656 - mood_tracker - INFO - Application ready to serve requests
+2025-06-20 20:27:25,702 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-06-20 20:27:25,703 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-06-20 20:27:25,705 - werkzeug - INFO -  * Restarting with stat
+2025-06-20 20:27:26,507 - mood_tracker - INFO - Mood Tracker application starting up...
+2025-06-20 20:27:26,508 - mood_tracker - INFO - Database URI: sqlite:///mood_tracker.db
+2025-06-20 20:27:26,524 - mood_tracker - INFO - Starting Mood Tracker application...
+2025-06-20 20:27:26,525 - mood_tracker - INFO - Beta code: moodtracker2024
+2025-06-20 20:27:26,525 - mood_tracker - INFO - Database: sqlite:///mood_tracker.db
+2025-06-20 20:27:26,525 - mood_tracker - INFO - Application ready to serve requests
+2025-06-20 20:27:26,550 - werkzeug - WARNING -  * Debugger is active!
+2025-06-20 20:27:26,560 - werkzeug - INFO -  * Debugger PIN: 528-913-726
+2025-06-20 20:27:31,552 - mood_tracker - INFO - Registration page accessed
+2025-06-20 20:27:31,559 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:31] "GET /register HTTP/1.1" 200 -
+2025-06-20 20:27:31,682 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:31] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-20 20:27:34,205 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:34] "[32mGET / HTTP/1.1[0m" 302 -
+2025-06-20 20:27:34,507 - mood_tracker - INFO - Login page accessed
+2025-06-20 20:27:34,511 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:34] "GET /login?next=/ HTTP/1.1" 200 -
+2025-06-20 20:27:34,850 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:34] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-20 20:27:40,232 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:40] "[32mGET / HTTP/1.1[0m" 302 -
+2025-06-20 20:27:40,546 - mood_tracker - INFO - Login page accessed
+2025-06-20 20:27:40,547 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:40] "GET /login?next=/ HTTP/1.1" 200 -
+2025-06-20 20:27:40,889 - werkzeug - INFO - 127.0.0.1 - - [20/Jun/2025 20:27:40] "[36mGET /static/style.css HTTP/1.1[0m" 304 -

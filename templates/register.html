@@ -77,10 +77,16 @@
                             </div>
                             
                             <div class="mb-3">
+                                <label for="beta_code" class="form-label">Beta Code</label>
+                                <input type="text" class="form-control" id="beta_code" name="beta_code" required>
+                                <div class="form-text">Enter the beta code provided to you</div>
+                            </div>
+                            
+                            <div class="mb-3">
                                 <label for="password" class="form-label">Password</label>
                                 <input type="password" class="form-control" id="password" name="password" required>
                                 <div class="password-requirements">
-                                    Password must be at least 6 characters long
+                                    Password must be at least {{ min_password_length }} characters long
                                 </div>
                             </div>
                             
